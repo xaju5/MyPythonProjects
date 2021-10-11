@@ -12,29 +12,70 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import RegularPolygon
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Circle
-pi = np.pi
+PI = np.pi
 
-##########
-###InitialParameters
-##########
+#=============================================================================
+#  Initial Parameters
+#=============================================================================
 NCLUSTERS = 5   #Number of total clusters per type
 NHOUSES = 5     #Number of houses in each cluster
 NMEETINGS = 3  #Number of meetings in each cluster
 
 MAPSIZE = 500
-RADIO = 10
+RADIO = 10          #size of buildings
+OFFSET = 0.3        #offset distance between same cluster buildings
+FICHNAME = "pandemic-map.npz"
 
-houseCenters = np.array([]).reshape(0,2)
-meetingCenters = np.array([]).reshape(0,2)
-polygonCenters = np.array([]).reshape(0,2)
-##########
-###Funtions
-##########
+#=============================================================================
+#   Funtions
+#=============================================================================
+
+
+def createMap(save=True, plot=False, giveReturn=False):
+    
+    houseCenters = np.array([]).reshape(0,2)
+    meetingCenters = np.array([]).reshape(0,2)
+    polygonCenters = np.array([]).reshape(0,2)
+    ##HOUSES
+    houseCenters, polygonCenters = __createClusterOfBuildings(NHOUSES, polygonCenters)
+          
+    #MEETINGS
+    meetingCenters, polygonCenters = __createClusterOfBuildings(NMEETINGS, polygonCenters)
+    
+    if(save):
+        np.savez(FICHNAME,a=houseCenters,b=meetingCenters,c=RADIO,d=MAPSIZE)    
+        
+    if(plot):
+        plotMap(houseCenters, meetingCenters)
+        
+    if (giveReturn):
+        return houseCenters, meetingCenters, RADIO, MAPSIZE
+    else:
+        return
+
+#Returns the buildings of a cluster
+def __createClusterOfBuildings(nbuildings, polygonCenters):
+    buildingPosition = np.array([]).reshape(0,2)
+    
+    angle = 2*PI/nbuildings 
+    polygonRadio = RADIO/(np.sin(angle/2)) + OFFSET * RADIO #distance form the center of the cluster to the position of the buildings
+      
+    #For each cluster it creates a polygon of "nbuildings" vertices and get the position of that verts to get the position of the buildings
+    for cluster in range(NCLUSTERS):
+        
+        center, correct = __getClusterPosition(polygonRadio, polygonCenters)
+        
+        if (correct): # if there is not errors when cheking
+            polygonCenters = np.vstack([polygonCenters,center])   #store the centers of all clusters
+            tempCenters = __getBuildingsInCluster(polygonRadio,nbuildings,center,polygonCenters)
+            buildingPosition=np.vstack([buildingPosition,tempCenters])
+            
+    return buildingPosition, polygonCenters
 
 #Returns the center of a cluster that does not colide with other obstacules
-def getClusterPosition(polyRadio):
+def __getClusterPosition(polygonRadio, polygonCenters):
     
-    distance = polyRadio+2*RADIO
+    distance = polygonRadio + 2 * RADIO   #distance from the center to the end of the cluster
     checkingPos = True
     
     #To check infite loop
@@ -50,9 +91,9 @@ def getClusterPosition(polyRadio):
             
             # Does it overlap any previous circles?
             for pc in polygonCenters:
-                d=np.sqrt((center[0]-pc[0])**2 + (center[1]-pc[1])**2)
+                d = np.sqrt((center[0]-pc[0])**2 + (center[1]-pc[1])**2)
                 
-                if d < (distance*2): #If they colide stop counting and restart
+                if d < (distance * 2): #If they colide stop counting and restart
                     checkingPos = True 
                     break
                 else:
@@ -71,9 +112,10 @@ def getClusterPosition(polyRadio):
     
     return center, correct
 
-#Returns the centers of the buildings in one cluster
-def getBuildingsInCluster(polyRadio,Nbuildings,center):
-    polygon = RegularPolygon((center[0],center[1]), Nbuildings,radius=polyRadio)
+#Returns the position of the buildings in one cluster
+def __getBuildingsInCluster(polygonRadio,nbuildings,center, polygonCenters):
+    
+    polygon = RegularPolygon((center[0],center[1]), nbuildings,radius=polygonRadio)
     verts = polygon.get_path().vertices
     trans = polygon.get_patch_transform()
     points = trans.transform(verts)
@@ -82,69 +124,27 @@ def getBuildingsInCluster(polyRadio,Nbuildings,center):
     return points
 
 
-##########
-###LOGIC
-##########
-
-##HOUSES
-#Calculate the distance between the circles of the cluster
-angle = 2*pi/NHOUSES 
-polygonRadio = RADIO/(np.sin(angle/2))
-
-#For each cluster it creates a polygon of NHOUSES  vertices and get the position of that verts to get the position of the circles
-for cluster in range(NCLUSTERS):
+def plotMap(houseCenters, meetingCenters):
+    patchesHouses = [] 
+    patchesMeeting = [] 
     
-    center, correct = getClusterPosition(polygonRadio)
-    
-    if (correct): # if there is not errors when cheking
-        polygonCenters=np.vstack([polygonCenters,center])
-        tempCenters = getBuildingsInCluster(polygonRadio,NHOUSES,center)
-        houseCenters=np.vstack([houseCenters,tempCenters])
+    for p in houseCenters:
+        circle = Circle((p[0], p[1]), radius = RADIO)
+        patchesHouses.append(circle)
         
-
-#MEETINGS
-#Calculate the distance between the circles of the cluster
-angle = 2*pi/NMEETINGS 
-polygonRadio = RADIO/(np.sin(angle/2))
-
-#For each cluster it creates a polygon of NMEETINGS  vertices and get the position of that verts to get the position of the circles
-for cluster in range(NCLUSTERS):
-    
-    center, correct = getClusterPosition(polygonRadio)
-    
-    if (correct): # if there is not errors when cheking
-        polygonCenters=np.vstack([polygonCenters,center])
-        tempCenters = getBuildingsInCluster(polygonRadio,NMEETINGS,center)
-        meetingCenters=np.vstack([meetingCenters,tempCenters])
+    for p in meetingCenters:
+        circle = Circle((p[0], p[1]), radius = RADIO)
+        patchesMeeting.append(circle)
         
-        
-##########
-###PLOTING
-##########
-
-patchesHouses = [] 
-patchesMeeting = [] 
-
-for p in houseCenters:
-    circle = Circle((p[0], p[1]), radius = RADIO)
-    patchesHouses.append(circle)
+    fig, ax =plt.subplots()
+    plt.title('Map')
+    ph = PatchCollection(patchesHouses, alpha=0.4, color = 'green') #alpha=transparency
+    pm = PatchCollection(patchesMeeting, alpha=0.4, color = 'red') #alpha=transparency
     
-for p in meetingCenters:
-    circle = Circle((p[0], p[1]), radius = RADIO)
-    patchesMeeting.append(circle)
+    ax.add_collection(ph)
+    ax.add_collection(pm)
     
-fig, ax =plt.subplots()
-plt.title('Map')
-ph = PatchCollection(patchesHouses, alpha=0.4, color = 'green') #alpha=transparency
-pm = PatchCollection(patchesMeeting, alpha=0.4, color = 'red') #alpha=transparency
-
-ax.add_collection(ph)
-ax.add_collection(pm)
-
-plt.axis([0,MAPSIZE,0,MAPSIZE])
-plt.draw()
-
-##########
-###SAVING
-##########
+    plt.axis([0,MAPSIZE,0,MAPSIZE])
+    plt.draw()
     
+    return

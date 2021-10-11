@@ -6,6 +6,9 @@ Created on Tue Aug  3 22:44:03 2021
 """
 import numpy as np
 import matplotlib.pyplot as plt
+import PandemicMapMaker as pmm
+from matplotlib.collections import PatchCollection
+from matplotlib.patches import Circle
 
 #==========================
 #Initial parameters
@@ -13,15 +16,25 @@ import matplotlib.pyplot as plt
 #Pandemic parameters
 PINFECTION=0.3  #Probability to infect someone
 PDEAD=0.01      #Probability to die when infected
-SPREAD=2        #Distance needed for infection
+SPREAD=20        #Distance needed for infection
 THEAL=50        #Time needed for healing
 
 #Map parameters
-MAPSIZE=100     #Size of the map
+LoadData = False
+FICHNAME = "pandemic-map.npz"
+if (LoadData):
+    with np.load(FICHNAME) as a:
+        houseCenters=a['a']
+        meetingCenters=a['b']
+        RADIO=a['c']
+        MAPSIZE=a['d']
+else:
+    houseCenters, meetingCenters, RADIO, MAPSIZE = pmm.createMap(save=True, plot=False, giveReturn=True)
+    
 TMAX=300        #Max iterations of the simulation
 NUMINDV=100     #Number of individuals on the map
-SPEED=2         #Speed of movement of individuals
-ITEPLOT=False   #Boolean to plot the iterative movement
+SPEED=10        #Speed of movement of individuals
+ITEPLOT=True   #Boolean to plot the iterative movement
 
 #Point to send the diferent indiviuals when their status changes.
 HEALTHYPOINT = -20
@@ -104,6 +117,25 @@ def calculateDeath():
 #Iterative plot
 if ITEPLOT:
     fig, ax = plt.subplots(1)
+    
+    patchesHouses = [] 
+    patchesMeeting = [] 
+    
+    for p in houseCenters:
+        circle = Circle((p[0], p[1]), radius = RADIO)
+        patchesHouses.append(circle)
+        
+    for p in meetingCenters:
+        circle = Circle((p[0], p[1]), radius = RADIO)
+        patchesMeeting.append(circle)
+    
+    ph = PatchCollection(patchesHouses, alpha=0.4, color = 'green') #alpha=transparency
+    pm = PatchCollection(patchesMeeting, alpha=0.4, color = 'red') #alpha=transparency
+    
+    ax.add_collection(ph)
+    ax.add_collection(pm)
+    
+    
     xh, yh = [],[]
     xinf, yinf = [],[]
     xim, yim = [],[]
