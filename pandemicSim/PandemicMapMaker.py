@@ -14,39 +14,39 @@ from matplotlib.collections import PatchCollection
 from matplotlib.patches import Circle
 PI = np.pi
 
-#=============================================================================
-#  Initial Parameters
-#=============================================================================
-NCLUSTERS = 5   #Number of total clusters per type
-NHOUSES = 5     #Number of houses in each cluster
-NMEETINGS = 3  #Number of meetings in each cluster
-
-MAPSIZE = 500
-RADIO = 10          #size of buildings
-OFFSET = 0.3        #offset distance between same cluster buildings
 FICHNAME = "pandemic-map.npz"
 
 #=============================================================================
 #   Funtions
 #=============================================================================
 
-
-def createMap(save=True, plot=False, giveReturn=False):
+#The main function to create the map
+def createMap(ncluster=5, nhouses=6, nmeeting=3, mapsize=500, radio=10, offset=0.3, save=True, plot=False, giveReturn=False):
+    
+    global NCLUSTERS, NHOUSES, NMEETINGS, MAPSIZE, RADIO, OFFSET
+    
+    NCLUSTERS = ncluster     #Number of total clusters per type
+    NHOUSES = nhouses        #Number of houses in each cluster
+    NMEETINGS = nmeeting     #Number of meetings in each cluster
+    MAPSIZE = mapsize
+    RADIO = radio            #size of buildings
+    OFFSET = offset          #offset distance between same cluster buildings
     
     houseCenters = np.array([]).reshape(0,2)
     meetingCenters = np.array([]).reshape(0,2)
     polygonCenters = np.array([]).reshape(0,2)
-    ##HOUSES
+    
+    # HOUSES
     houseCenters, polygonCenters = __createClusterOfBuildings(NHOUSES, polygonCenters)
           
-    #MEETINGS
+    # MEETINGS
     meetingCenters, polygonCenters = __createClusterOfBuildings(NMEETINGS, polygonCenters)
     
     if(save):
         np.savez(FICHNAME,a=houseCenters,b=meetingCenters,c=RADIO,d=MAPSIZE)    
         
     if(plot):
-        plotMap(houseCenters, meetingCenters)
+        plotMap(houseCenters, meetingCenters, RADIO, MAPSIZE)
         
     if (giveReturn):
         return houseCenters, meetingCenters, RADIO, MAPSIZE
@@ -84,7 +84,7 @@ def __getClusterPosition(polygonRadio, polygonCenters):
     
     while (checkingPos):
         
-        center = MAPSIZE*np.random.rand(2)
+        center = MAPSIZE * np.random.rand(2)
         
         # Is the whole cluster inside the map?
         if center[0]>distance and center[1]>distance and (center[1]+distance)<MAPSIZE and (center[0]+distance)<MAPSIZE:
@@ -123,28 +123,36 @@ def __getBuildingsInCluster(polygonRadio,nbuildings,center, polygonCenters):
   
     return points
 
-
-def plotMap(houseCenters, meetingCenters):
+#A function to plot the map
+def plotMap(houseCenters=None, meetingCenters= None, radio = None, mapsize = None, loadData=False):
+    
+    if (loadData):
+        with np.load(FICHNAME) as a:
+            houseCenters=a['a']
+            meetingCenters=a['b']
+            radio=a['c']
+            mapsize=a['d']
+    
     patchesHouses = [] 
     patchesMeeting = [] 
     
     for p in houseCenters:
-        circle = Circle((p[0], p[1]), radius = RADIO)
+        circle = Circle((p[0], p[1]), radius = radio)
         patchesHouses.append(circle)
         
     for p in meetingCenters:
-        circle = Circle((p[0], p[1]), radius = RADIO)
+        circle = Circle((p[0], p[1]), radius = radio)
         patchesMeeting.append(circle)
         
     fig, ax =plt.subplots()
     plt.title('Map')
     ph = PatchCollection(patchesHouses, alpha=0.4, color = 'green') #alpha=transparency
-    pm = PatchCollection(patchesMeeting, alpha=0.4, color = 'red') #alpha=transparency
+    pm = PatchCollection(patchesMeeting, alpha=0.4, color = 'red')  #alpha=transparency
     
     ax.add_collection(ph)
     ax.add_collection(pm)
     
-    plt.axis([0,MAPSIZE,0,MAPSIZE])
+    plt.axis([0,mapsize,0,mapsize])
     plt.draw()
     
     return

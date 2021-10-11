@@ -20,16 +20,19 @@ SPREAD=20        #Distance needed for infection
 THEAL=50        #Time needed for healing
 
 #Map parameters
-LoadData = False
+loadData = False
 FICHNAME = "pandemic-map.npz"
-if (LoadData):
+if (loadData):
     with np.load(FICHNAME) as a:
         houseCenters=a['a']
         meetingCenters=a['b']
         RADIO=a['c']
         MAPSIZE=a['d']
 else:
-    houseCenters, meetingCenters, RADIO, MAPSIZE = pmm.createMap(save=True, plot=False, giveReturn=True)
+    NCLUSTERS = 10
+    NHOUSES = 9
+    NMEETINGS = 4
+    houseCenters, meetingCenters, RADIO, MAPSIZE = pmm.createMap(NCLUSTERS, NHOUSES, NMEETINGS, giveReturn=True)
     
 TMAX=300        #Max iterations of the simulation
 NUMINDV=100     #Number of individuals on the map
