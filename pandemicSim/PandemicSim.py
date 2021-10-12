@@ -16,7 +16,7 @@ from matplotlib.patches import Circle
 #Pandemic parameters
 PINFECTION=0.3  #Probability to infect someone
 PDEAD=0.01      #Probability to die when infected
-SPREAD=20        #Distance needed for infection
+SPREAD=10        #Distance needed for infection
 THEAL=50        #Time needed for healing
 
 #Map parameters
@@ -34,10 +34,11 @@ else:
     NMEETINGS = 4
     houseCenters, meetingCenters, RADIO, MAPSIZE = pmm.createMap(NCLUSTERS, NHOUSES, NMEETINGS, giveReturn=True)
     
-TMAX=300        #Max iterations of the simulation
-NUMINDV=100     #Number of individuals on the map
-SPEED=10        #Speed of movement of individuals
-ITEPLOT=True   #Boolean to plot the iterative movement
+TMAX=300                                    #Max iterations of the simulation
+FAMILYMEMBER = 5                            #Relation of how many member live in each house
+NUMINDV= len(houseCenters) * FAMILYMEMBER   #Number of individuals on the map
+SPEED=5                                    #Speed of movement of individuals
+ITEPLOT=True                                #Boolean to plot the iterative movement
 
 #Point to send the diferent indiviuals when their status changes.
 HEALTHYPOINT = -20
@@ -52,17 +53,31 @@ status = np.zeros(NUMINDV)          #0=normal 1=infected 2=immune 3=dead
 timeInfected = np.zeros(NUMINDV)    
 
 #position divided in types for make the plot easy
-positionHealhy = MAPSIZE * np.random.rand(NUMINDV,2)
+positionHome = np.array([]).reshape(0,2)
+for hc in houseCenters:
+    for f in range(FAMILYMEMBER):
+        positionHome = np.vstack([positionHome,hc])
+
+positionMeeting = np.array([]).reshape(0,2)
+for mc in meetingCenters:
+    for f in range(NUMINDV//len(meetingCenters)):
+        positionMeeting = np.vstack([positionMeeting,mc])
+while(len(positionMeeting) < len(positionHome)):
+    indicator = np.random.randint(0,len(meetingCenters))
+    positionMeeting = np.vstack([positionMeeting,meetingCenters[indicator]])
+np.random.shuffle(positionMeeting)    
+    
+
+positionHealthy = np.copy(positionHome) 
 positionInfected = np.ones((NUMINDV,2)) * INFECTPOINT
 positionImmune = np.ones((NUMINDV,2)) * IMMUNEPOINT 
-
-destination = MAPSIZE * np.random.rand(NUMINDV,2)
+destination = np.copy(positionMeeting) 
 
 #set first infected
 indicator= np.random.randint(0,NUMINDV)
 status[indicator] = 1
-positionInfected[indicator] = positionHealhy[indicator]
-positionHealhy[indicator] = HEALTHYPOINT 
+positionInfected[indicator] = positionHealthy[indicator]
+positionHealthy[indicator] = HEALTHYPOINT 
 #==========================
 #Definitions of functions
 #==========================    
@@ -86,15 +101,15 @@ def infect():
         for j in range(NUMINDV):
             if i != j and status[j] == 0:          
                 #Calculate the distance with the other ones
-                sideA = positionInfected[i,0] - positionHealhy [j,0]
-                sideB = positionInfected[i,1] - positionHealhy [j,1]
+                sideA = positionInfected[i,0] - positionHealthy [j,0]
+                sideB = positionInfected[i,1] - positionHealthy [j,1]
                 distance = np.sqrt(sideA**2 + sideB**2)
                 
                 if distance <= SPREAD:
                     if np.random.rand() <= PINFECTION:
                         status[j] = 1
-                        positionInfected[j] = positionHealhy[j]
-                        positionHealhy[j] = HEALTHYPOINT
+                        positionInfected[j] = positionHealthy[j]
+                        positionHealthy[j] = HEALTHYPOINT
 
 def heal():
     """After a period of time they heal"""
@@ -109,7 +124,7 @@ def calculateDeath():
     if status[i] == 1:
         if np.random.rand() <= PDEAD:
             status[i] = 3
-            positionHealhy[i] = HEALTHYPOINT 
+            positionHealthy[i] = HEALTHYPOINT 
             positionInfected[i] = INFECTPOINT
             positionImmune[i] = IMMUNEPOINT 
          
@@ -151,7 +166,7 @@ if ITEPLOT:
 #main
 for t in range(TMAX): 
     for i in range(NUMINDV):
-        stepForward(positionHealhy,0)
+        stepForward(positionHealthy,0)
         stepForward(positionInfected,1)
         stepForward(positionImmune,2)
         infect()
@@ -160,7 +175,7 @@ for t in range(TMAX):
     
     #Represent movement of individuals  
     if ITEPLOT:
-        sch.set_offsets(np.c_[positionHealhy[:,0],positionHealhy[:,1]])
+        sch.set_offsets(np.c_[positionHealthy[:,0],positionHealthy[:,1]])
         scinf.set_offsets(np.c_[positionInfected[:,0],positionInfected[:,1]])
         scim.set_offsets(np.c_[positionImmune[:,0],positionImmune[:,1]])
         fig.canvas.draw_idle()
