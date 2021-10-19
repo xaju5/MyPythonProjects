@@ -14,10 +14,10 @@ from matplotlib.patches import Circle
 #Initial parameters
 #==========================
 #Pandemic parameters
-PINFECTION=0.3  #Probability to infect someone
+PINFECTION=0.1  #Probability to infect someone
 PDEAD=0.01      #Probability to die when infected
-SPREAD=10        #Distance needed for infection
-THEAL=50        #Time needed for healing
+SPREAD=5        #Distance needed for infection
+THEAL=400        #Time needed for healing
 
 #Map parameters
 loadData = False
@@ -34,10 +34,13 @@ else:
     NMEETINGS = 4
     houseCenters, meetingCenters, RADIO, MAPSIZE = pmm.createMap(NCLUSTERS, NHOUSES, NMEETINGS, giveReturn=True)
     
-TMAX=300                                    #Max iterations of the simulation
+TMAX=10000                                    #Max iterations of the simulation
+THOME=50                                    #Time expended in Homes
+TMEETING=50                                 #Time expended in Meetings
+TTRANSIT=90                                 #Time expended in Transit
 FAMILYMEMBER = 5                            #Relation of how many member live in each house
 NUMINDV= len(houseCenters) * FAMILYMEMBER   #Number of individuals on the map
-SPEED=5                                    #Speed of movement of individuals
+SPEED=5                                     #Speed of movement of individuals
 ITEPLOT=True                                #Boolean to plot the iterative movement
 
 #Point to send the diferent indiviuals when their status changes.
@@ -84,20 +87,19 @@ positionHealthy[indicator] = HEALTHYPOINT
 def stepForward(position,num):
     """Individuals moves one step foward""" 
     if status[i] == num:
-        angle = np.arctan2((destination[i,1]-position[i,1]),(destination[i,0]-position[i,0]))
-        nextStep = np.array([SPEED*np.cos(angle), SPEED*np.sin(angle)])
-        position[i] += nextStep
         
-        #Check if the indiviual has arrived to the destination. If it does, make a new destination
+        #Check if the indiviual has arrived to the destination. If it does, dont do nothing
         distToDest = np.sqrt((position[i,0]-destination[i,0])**2 + (position[i,1] - destination[i,1])**2)
-        if distToDest <= SPEED:
-            destination[i] = MAPSIZE * np.random.rand(2)
+        if distToDest >= SPEED:                  
+            angle = np.arctan2((destination[i,1]-position[i,1]),(destination[i,0]-position[i,0]))
+            nextStep = np.array([SPEED*np.cos(angle), SPEED*np.sin(angle)])
+            position[i] += nextStep
+        
+        
         
 def infect():
-    """If close enough, they can infect""" 
+    """If close enough when traveling, they can infect""" 
     if status[i] == 1: 
-        timeInfected[i] += 1
-        
         for j in range(NUMINDV):
             if i != j and status[j] == 0:          
                 #Calculate the distance with the other ones
@@ -111,12 +113,25 @@ def infect():
                         positionInfected[j] = positionHealthy[j]
                         positionHealthy[j] = HEALTHYPOINT
 
+def staticInfection():
+    """If they are inside the same building, they can be infected"""
+    if status[i] == 1:
+        for j in range(NUMINDV):
+            tempboolean = destination[i] == destination[j]
+            if i != j and status[j] == 0 and tempboolean.all(): 
+                if np.random.rand() <= PINFECTION:
+                        status[j] = 1
+                        positionInfected[j] = positionHealthy[j]
+                        positionHealthy[j] = HEALTHYPOINT
+    
 def heal():
     """After a period of time they heal"""
     if status[i] == 1 and timeInfected[i] > THEAL: 
         status[i] = 2
         positionImmune[i] = positionInfected[i]
         positionInfected[i] = INFECTPOINT
+    else:
+        timeInfected[i] += 1
 
                            
 def calculateDeath():
@@ -127,8 +142,16 @@ def calculateDeath():
             positionHealthy[i] = HEALTHYPOINT 
             positionInfected[i] = INFECTPOINT
             positionImmune[i] = IMMUNEPOINT 
-         
  
+def iterativeMovement():
+    """If ITEPLOT enable, move the individuals of the plot"""
+    if ITEPLOT:
+        sch.set_offsets(np.c_[positionHealthy[:,0],positionHealthy[:,1]])
+        scinf.set_offsets(np.c_[positionInfected[:,0],positionInfected[:,1]])
+        scim.set_offsets(np.c_[positionImmune[:,0],positionImmune[:,1]])
+        fig.canvas.draw_idle()
+        plt.pause(0.2)
+        
 #==========================
 #Execution
 #==========================
@@ -165,21 +188,44 @@ if ITEPLOT:
 
 #main
 for t in range(TMAX): 
-    for i in range(NUMINDV):
-        stepForward(positionHealthy,0)
-        stepForward(positionInfected,1)
-        stepForward(positionImmune,2)
-        infect()
-        heal()
-        calculateDeath()
     
-    #Represent movement of individuals  
-    if ITEPLOT:
-        sch.set_offsets(np.c_[positionHealthy[:,0],positionHealthy[:,1]])
-        scinf.set_offsets(np.c_[positionInfected[:,0],positionInfected[:,1]])
-        scim.set_offsets(np.c_[positionImmune[:,0],positionImmune[:,1]])
-        fig.canvas.draw_idle()
-        plt.pause(0.2)
+    for th in range(THOME):         #Home time
+        for i in range(NUMINDV):
+            staticInfection()
+            heal()
+            calculateDeath()    
+        iterativeMovement()
+            
+    destination = np.copy(positionMeeting) 
+    
+    for tt in range(TTRANSIT):      #Transit time
+        for i in range(NUMINDV):
+            stepForward(positionHealthy,0)
+            stepForward(positionInfected,1)
+            stepForward(positionImmune,2)
+            infect()
+            heal()
+            calculateDeath()    
+        iterativeMovement()
+            
+    for tm in range(TMEETING):      #Meeting time
+        for i in range(NUMINDV):
+            staticInfection()
+            heal()
+            calculateDeath()   
+        iterativeMovement()
+        
+    destination = np.copy(positionHome) 
+    
+    for tt in range(TTRANSIT):      #Transit time
+        for i in range(NUMINDV):
+            stepForward(positionHealthy,0)
+            stepForward(positionInfected,1)
+            stepForward(positionImmune,2)
+            infect()
+            heal()
+            calculateDeath()    
+        iterativeMovement()
     
     #stop loop if there is no more infected
     if np.count_nonzero(status == 1) == 0:

@@ -2,7 +2,7 @@
 """
 Created on Sun Oct  3 18:20:46 2021
 
-@author: Usuario
+@author: xaju5
 """
 
 #Script to create the map of the pandemicSim
