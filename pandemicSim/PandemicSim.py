@@ -15,9 +15,9 @@ from matplotlib.patches import Circle
 #==========================
 #Pandemic parameters
 PINFECTION=0.005  #Probability to infect someone
-PDEAD=0.001      #Probability to die when infected
+PDEAD=0.0035      #Probability to die when infected
 SPREAD=4        #Distance needed for infection
-THEAL=50        #Time needed for healing
+THEAL=10        #Time needed for healing
 
 #Map parameters
 loadData = False
@@ -34,13 +34,13 @@ else:
     NMEETINGS = 4
     houseCenters, meetingCenters, RADIO, MAPSIZE = pmm.createMap(NCLUSTERS, NHOUSES, NMEETINGS, giveReturn=True)
     
-TMAX=10000                                  #Max iterations of the simulation
+TMAX=40                                  #Max iterations of the simulation
 TSTATIC=50                                  #Time expended in Meetings
-TTRANSIT=95                                 #Time expended in Transit
+TTRANSIT=100                                 #Time expended in Transit
 FAMILYMEMBER = 5                            #Relation of how many member live in each house
 NUMINDV= len(houseCenters) * FAMILYMEMBER   #Number of individuals on the map
 SPEED=5                                     #Speed of movement of individuals
-ITEPLOT=True                                #Boolean to plot the iterative movement
+ITEPLOT=False                               #Boolean to plot the iterative movement
 
 #Point to send the diferent indiviuals when their status changes.
 HEALTHYPOINT = -20
@@ -68,18 +68,19 @@ while(len(positionMeeting) < len(positionHome)):
     indicator = np.random.randint(0,len(meetingCenters))
     positionMeeting = np.vstack([positionMeeting,meetingCenters[indicator]])
 np.random.shuffle(positionMeeting)    
-    
+
+destination = np.copy(positionHome)    
 
 positionHealthy = np.copy(positionHome) 
 positionInfected = np.ones((NUMINDV,2)) * INFECTPOINT
 positionImmune = np.ones((NUMINDV,2)) * IMMUNEPOINT 
-#destination = np.copy(positionMeeting) 
 
 #set first infected
 indicator= np.random.randint(0,NUMINDV)
 status[indicator] = 1
 positionInfected[indicator] = positionHealthy[indicator]
 positionHealthy[indicator] = HEALTHYPOINT 
+
 #==========================
 #Definitions of functions
 #==========================  
@@ -91,7 +92,7 @@ def transitOfIndividuals():
             stepForward(indID,positionHealthy,0)
             stepForward(indID,positionInfected,1)
             stepForward(indID,positionImmune,2)
-            infect(indID)
+            infection(indID)
                 
         iterativeMovement(fig, sch, scinf, scim)
         
@@ -121,7 +122,7 @@ def stepForward(indID,position,num):
             position[indID] += nextStep
 
                     
-def infect(indID):
+def infection(indID):
     """If close enough when traveling, they can infect""" 
     if status[indID] == 1: 
         for j in range(NUMINDV):
@@ -151,10 +152,12 @@ def staticInfection(indID):
 
 def heal(indID):
     """After a period of time they heal"""
-    if status[indID] == 1 and timeInfected[indID] > THEAL: 
-        status[indID] = 2
-        positionImmune[indID] = positionInfected[indID]
-        positionInfected[indID] = INFECTPOINT
+    if status[indID] == 1: 
+        healTreshold = THEAL * (np.random.rand() + 0.01)
+        if timeInfected[indID] > healTreshold: 
+            status[indID] = 2
+            positionImmune[indID] = positionInfected[indID]
+            positionInfected[indID] = INFECTPOINT
     else:
         timeInfected[indID] += 1
 
@@ -223,15 +226,15 @@ fig, sch, scinf, scim = setUpIterativeMovement()
 #MAIN
 for t in range(TMAX): 
     
+    staticIndividuals()
+    
     if t%2 == 0:
         destination = np.copy(positionMeeting) 
         print("In Home")
     else:
         destination = np.copy(positionHome) 
         print("In Meeting")
-        
-    staticIndividuals()
-    
+
     #stop loop if there is no more infected
     if np.count_nonzero(status == 1) == 0:
         break
@@ -245,7 +248,8 @@ for t in range(TMAX):
     if np.count_nonzero(status == 1) == 0:
         break
 
-#Print data    
+#Print data   
+print("\n"+"===== DATA ======") 
 print("Healthy: " + str(np.count_nonzero(status == 0)))
 print("Infected: " + str(np.count_nonzero(status == 1)))
 print("Immune: " + str(np.count_nonzero(status == 2)))
