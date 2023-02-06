@@ -10,9 +10,13 @@ import numpy as np
 #==========
 #PARAMETERS
 #==========
+UNKNOW_NUMBER = 0 #The number is avaliable to use
+USED_NUMBER = 1 #The number has been used in the same row or colum
 
 solution = np.zeros((9,9))
 sudoku = np.zeros((9,9))
+solvingarray = np.zeros((10,9,9))
+
 option = None
 filename='arrays.npz'
 
@@ -33,7 +37,7 @@ def printMenu():
     
 def fillArray(array):
     """
-    Fills the array with the input of the user
+    It Fills the array with the input of the user
 
     Parameters
     ----------
@@ -56,7 +60,7 @@ def fillArray(array):
             
 def printArray(array):
     """
-    Print the array divided by lines, for easier reading
+    It Prints the array divided by lines, for easier reading
 
     Parameters
     ----------
@@ -109,9 +113,41 @@ def saveArray():
 #===================
 #ALGORITHM FUNCTIONS
 #===================
-def resolveSudoku():
-    print("TODO")
+def markUsedNumbers():
+    """
+    It marks the rows, colums and squares if the number is used and, therefore, it cannot be used in that position.
+
+    Returns
+    -------
+    None.
+
+    """
+    numrow = 0
+    for row in solvingarray[0,:,:]: 
+        numcolum = 0 
+        for value in row:
+            if value != 0: #If one value asigned, deny it in all its row and columns
+                solvingarray[int(value),numrow,:] = USED_NUMBER #mark row as used
+                solvingarray[int(value),:,numcolum] = USED_NUMBER #mark colum as used
+                
+                squarerow = int(numrow/3) #the offset of the squares
+                squarecolum = int(numcolum/3)
+                for r in range(3):
+                    for c in range(3):
+                        posr = (3*squarerow) + r
+                        posc = (3*squarecolum) + c
+                        solvingarray[int(value), posr, posc] = USED_NUMBER #mark the square as used                
+#                if numrow== 8:
+#                    print("Value: "+str(value)+" square: ["+str(squarerow)+str(squarecolum)+"] pos: ["+str(posr)+str(posc)+"]")
+            numcolum += 1
+        numrow += 1   
+    #print(solvingarray)
  
+def resolveSudoku():
+    global solvingarray
+    solvingarray[0,:,:] = sudoku #Copy the sudoku to the solving array
+    markUsedNumbers()
+    
 #=============
 #MAIN fUNCTION
 #=============
