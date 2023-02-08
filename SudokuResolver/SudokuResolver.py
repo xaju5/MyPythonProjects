@@ -113,6 +113,10 @@ def saveArray():
 #===================
 #ALGORITHM FUNCTIONS
 #===================
+def createSolvingArray():
+    global solvingarray
+    solvingarray[0,:,:] = sudoku.copy() #Copy the sudoku to the solving array
+
 def markUsedNumbers():
     """
     It marks the rows, colums and squares if the number is used and, therefore, it cannot be used in that position.
@@ -126,7 +130,8 @@ def markUsedNumbers():
     for row in solvingarray[0,:,:]: 
         numcolum = 0 
         for value in row:
-            if value != 0: #If one value asigned, deny it in all its row and columns
+            if value != UNKNOW_NUMBER: #If one value asigned, deny it in all its row and columns
+                solvingarray[1:,numrow,numcolum] = USED_NUMBER #mark all for this number
                 solvingarray[int(value),numrow,:] = USED_NUMBER #mark row as used
                 solvingarray[int(value),:,numcolum] = USED_NUMBER #mark colum as used
                 
@@ -141,12 +146,31 @@ def markUsedNumbers():
 #                    print("Value: "+str(value)+" square: ["+str(squarerow)+str(squarecolum)+"] pos: ["+str(posr)+str(posc)+"]")
             numcolum += 1
         numrow += 1   
-    #print(solvingarray)
+#    print(solvingarray)
  
-def resolveSudoku():
+def checkNewValues():
+    """
+    Check every row in the x axis. If there is only one zero, the position of the zero is the final value of that row.
+
+    Returns
+    -------
+    None.
+
+    """
     global solvingarray
-    solvingarray[0,:,:] = sudoku #Copy the sudoku to the solving array
-    markUsedNumbers()
+    for y_index in range(9):
+        for z_index in range(9): 
+            row = solvingarray[1:,y_index,z_index] 
+            position = np.where(row==0)
+            if np.size(position) == 1:
+                print(position)
+                solvingarray[0,y_index,z_index] = position[0] + 1 #+1 because the first is the value of the array and not one posible solution.
+                   
+def resolveSudoku():
+    createSolvingArray()
+    for i in range(9):
+        markUsedNumbers()
+        checkNewValues()
     
 #=============
 #MAIN fUNCTION
