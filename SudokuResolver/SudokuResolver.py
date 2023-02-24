@@ -13,9 +13,9 @@ import numpy as np
 UNKNOW_NUMBER = 0 #The number is avaliable to use
 USED_NUMBER = 1 #The number has been used in the same row or colum
 
-solution = np.zeros((9,9))
-sudoku = np.zeros((9,9))
-solvingarray = np.zeros((10,9,9))
+solution = np.zeros((9,9)).astype(int)
+sudoku = np.zeros((9,9)).astype(int)
+solvingarray = np.zeros((10,9,9)).astype(int)
 
 option = None
 filename='arrays.npz'
@@ -51,20 +51,40 @@ def fillArray(array):
     """
     
     for r in range(9):
-        print("\nInsert "+str(r)+"row (write 0 for unknow values): ")
+        print(f'\nInsert {r} row (write 0 for unknow values): ')
         row = input()
         c = 0
         for value in row:
             array[r,c] = value
             c +=1
             
-def printArray(array):
+def unpack(iterable):
     """
-    It Prints the array divided by lines, for easier reading
+    It takes the items and yields them one by one. 
 
     Parameters
     ----------
-    array : TYPE
+    iterable : 9x9 array
+        The array to unpack.
+
+    Yields
+    ------
+    generator object
+        All number stored into the array. Tt stores the values of the array into one direction
+
+    """
+    for item in iterable:
+        yield from item
+        
+            
+            
+def printArray(array):
+    """
+    It Prints the array formated as a sudoku
+    
+    Parameters
+    ----------
+    array : 9x9 array
         array to print.
 
     Returns
@@ -72,25 +92,25 @@ def printArray(array):
     None.
 
     """
-    print("\n")
-    numrow = 0
-    for row in array:
-        #Checks if is needed to print a horizontal line
-        if numrow % 3 == 0 and numrow != 0:
-            print("--- --- ---")
-        numrow += 1
-        
-        numcolum = 0
-        for colum in row:
-            #checks if it is needed to print a vertical line
-            if numcolum % 3 == 0 and numcolum != 0:
-                print("|",end='')
-            numcolum += 1
-            
-            #actual array[r,c] is printed:
-            print(int(colum),end='')
-        print("\n")
-            
+    outline = \
+    """\
+    +-----------------------+
+    | {} {} {} | {} {} {} | {} {} {} |
+    | {} {} {} | {} {} {} | {} {} {} |
+    | {} {} {} | {} {} {} | {} {} {} |
+    +-----------------------+
+    | {} {} {} | {} {} {} | {} {} {} |
+    | {} {} {} | {} {} {} | {} {} {} |
+    | {} {} {} | {} {} {} | {} {} {} |
+    +-----------------------+
+    | {} {} {} | {} {} {} | {} {} {} |
+    | {} {} {} | {} {} {} | {} {} {} |
+    | {} {} {} | {} {} {} | {} {} {} |
+    +-----------------------+
+    """ 
+    print(outline.format(*unpack(array))) #unpack() stores the values of the array into one direction so it is necesary to obtain its *value
+          
+
 def loadArray():
     ans = input("\nAre you sure that you want to LOAD the file?(y/n):")
     if ans == 'y':
