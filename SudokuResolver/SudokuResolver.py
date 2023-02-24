@@ -126,6 +126,7 @@ def markUsedNumbers():
     None.
 
     """
+    global solvingarray
     numrow = 0
     for row in solvingarray[0,:,:]: 
         numcolum = 0 
@@ -158,19 +159,40 @@ def checkNewValues():
 
     """
     global solvingarray
-    for y_index in range(9):
+    for y_index in range(9): #The total number of colums is 9
         for z_index in range(9): 
             row = solvingarray[1:,y_index,z_index] 
             position = np.where(row==0)
             if np.size(position) == 1:
-                print(position)
+#                print(position)
                 solvingarray[0,y_index,z_index] = position[0] + 1 #+1 because the first is the value of the array and not one posible solution.
+                
+def checklonelyNumbers():
+    """
+    Check if in the colum of each value of x in solvingarray(x,y,z) has only one zero. If it does, mark the value of x as the response of that position (y,z)
+
+    Returns
+    -------
+    None.
+
+    """
+    global solvingarray
+    for x_index in range(1,10): #all posible values are between 1-10's 2Dmatrix
+        for z_index in range(9):  #The total number of colums is 9
+#            print(x_index,z_index)
+            row = solvingarray[x_index,:,z_index]
+            position = np.where(row==0)
+            if np.size(position) == 1:
+                solvingarray[0,position[0] + 1,z_index] = x_index  #+1 because the first is the value of the array and not one posible solution.
+    
                    
 def resolveSudoku():
     createSolvingArray()
-    for i in range(9):
+    for i in range(2):
+        print(i," iteration completed")
         markUsedNumbers()
         checkNewValues()
+        checklonelyNumbers()
     
 #=============
 #MAIN fUNCTION
